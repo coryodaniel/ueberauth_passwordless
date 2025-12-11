@@ -32,7 +32,7 @@ defmodule UeberauthPasswordless.MixProject do
   defp deps do
     [
       {:ueberauth, "~> 0.6"},
-      {:ex_crypto, github: "ntrepid8/ex_crypto", ref: "0915c274503f9fc6d6f5fab8c98467e7414cf8fc"},
+      {:ex_crypto, github: "ntrepid8/ex_crypto", ref: "0997a1aaebe701523c0a9b71d4acec4a1819354e"},
       {:ex_doc, ">= 0.0.0", only: :dev, runtime: false}
     ]
   end
