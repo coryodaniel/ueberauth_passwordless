@@ -185,7 +185,8 @@ defmodule Ueberauth.Strategy.Passwordless do
 
   defp set_redirect_params(conn, redirect_url) do
     email = conn.private[:passwordless_email] |> URI.encode_www_form()
-    "#{redirect_url}?email=#{email}"
+    separator = if String.contains?(redirect_url, "?"), do: "&", else: "?"
+    "#{redirect_url}#{separator}email=#{email}"
   end
 
   defp extract_email(token),
