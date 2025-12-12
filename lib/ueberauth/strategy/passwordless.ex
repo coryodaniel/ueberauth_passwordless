@@ -77,18 +77,12 @@ defmodule Ueberauth.Strategy.Passwordless do
   use Ueberauth.Strategy, ignores_csrf_attack: true
 
   alias Ueberauth.Auth.{Extra, Info}
-  alias Ueberauth.Strategy.Passwordless.Store
 
   @defaults [
     # Default TTL for Tokens is 15 Minutes.
     # After the TTL, the tokens are invalid and will be garbage collected.
     ttl: 15 * 60,
-    redirect_url: "/",
-    use_store: true,
-    # Garbage collect the token :ets store every Minute
-    garbage_collection_interval: 1000 * 60,
-    store_process_name: Ueberauth.Strategy.Passwordless.Store,
-    store_table_name: :passwordless_token_store
+    redirect_url: "/"
   ]
 
   @doc """
@@ -96,6 +90,12 @@ defmodule Ueberauth.Strategy.Passwordless do
   """
   def handle_request!(%Plug.Conn{params: %{"email" => email}} = conn) do
     conn = put_private(conn, :passwordless_email, email)
+
+    if config(:token_secret) |> is_nil(),
+      do: raise(KeyError, message: "You must set a :token_secret in your config.")
+
+    if config(:mailer) |> is_nil(),
+      do: raise(KeyError, message: "You must set a :mailer Module in your config.")
 
     conn
     |> create_link(email)
@@ -113,8 +113,7 @@ defmodule Ueberauth.Strategy.Passwordless do
     Handles the callback phase of the authentication flow.
   """
   def handle_callback!(%Plug.Conn{params: %{"token" => token}} = conn) do
-    with {:ok, token} <- invalidate_token(token),
-         {:ok, email} <- extract_email(token) do
+    with {:ok, email} <- extract_email(token) do
       put_private(conn, :passwordless_email, email)
     else
       _error -> set_errors!(conn, [error("invalid_token", "Token was invalid")])
@@ -167,7 +166,6 @@ defmodule Ueberauth.Strategy.Passwordless do
   def create_link(conn, email, opts \\ []) do
     {:ok, token} = create_token(email, opts)
 
-    if config(:use_store), do: Store.add(token)
     callback_url(conn, token: token)
   end
 
@@ -192,31 +190,10 @@ defmodule Ueberauth.Strategy.Passwordless do
   defp extract_email(token),
     do: ExCrypto.Token.verify(token, config(:token_secret), config(:ttl))
 
-  defp invalidate_token(token) do
-    cond do
-      not config(:use_store) ->
-        {:ok, token}
-
-      Store.exists?(token) ->
-        Store.remove(token)
-        {:ok, token}
-
-      true ->
-        {:error, :token_already_used}
-    end
-  end
-
   def config(key), do: get_config() |> Keyword.fetch!(key)
 
   defp get_config() do
     config = Application.get_env(:ueberauth, __MODULE__, [])
-
-    if Keyword.get(config, :token_secret) |> is_nil(),
-      do: raise(KeyError, message: "You must set a :token_secret in your config.")
-
-    if Keyword.get(config, :mailer) |> is_nil(),
-      do: raise(KeyError, message: "You must set a :mailer Module in your config.")
-
     @defaults |> Keyword.merge(config)
   end
 end

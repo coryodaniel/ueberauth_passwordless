@@ -3,7 +3,6 @@ defmodule UeberauthPasswordlessTest do
   use Plug.Test
 
   alias Ueberauth.Strategy.Passwordless
-  alias Ueberauth.Strategy.Passwordless.Store
 
   describe "handle_request!/1" do
     test "sends an Email" do
@@ -15,9 +14,6 @@ defmodule UeberauthPasswordlessTest do
         "http://www.example.com?token=" <> encoded_token,
         "foo@bar.com"
       }
-
-      token = encoded_token |> URI.decode()
-      assert Store.exists?(token)
     end
 
     test "redirects to a default url" do
@@ -54,26 +50,6 @@ defmodule UeberauthPasswordlessTest do
   end
 
   describe "handle_callback!/1" do
-    test "returns an error if the token was used already" do
-      link = conn("get", "/") |> Passwordless.create_link("foo@bar.com")
-
-      conn =
-        conn("get", link)
-        |> Plug.Conn.fetch_query_params()
-        |> Passwordless.handle_callback!()
-
-      assert conn.private.passwordless_email == "foo@bar.com"
-
-      conn =
-        conn("get", link)
-        |> Plug.Conn.fetch_query_params()
-        |> Passwordless.handle_callback!()
-
-      error = Enum.at(conn.assigns.ueberauth_failure.errors, 0)
-      assert error.message == "Token was invalid"
-      assert error.message_key == "invalid_token"
-    end
-
     test "returns an error if the token is outdated" do
       timestamp_one_day_ago =
         :calendar.universal_time()
