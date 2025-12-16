@@ -90,8 +90,9 @@ defmodule Ueberauth.Strategy.Passwordless do
   """
   def handle_request!(%Plug.Conn{params: %{"email" => email}} = conn) do
     conn = put_private(conn, :passwordless_email, email)
+    token_secret = config(:token_secret)
 
-    if config(:token_secret) |> is_nil(),
+    if is_nil(token_secret) || token_secret == "",
       do: raise(KeyError, message: "You must set a :token_secret in your config.")
 
     if config(:mailer) |> is_nil(),

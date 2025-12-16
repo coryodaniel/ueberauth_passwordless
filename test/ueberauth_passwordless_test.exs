@@ -11,7 +11,7 @@ defmodule UeberauthPasswordlessTest do
 
       assert_receive {
         :mailer_called,
-        "http://www.example.com?token=" <> encoded_token,
+        "http://www.example.com?token=" <> _encoded_token,
         "foo@bar.com"
       }
     end
